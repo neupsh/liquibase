@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.liquibase</groupId>
     <artifactId>liquibase-parent</artifactId>
-    <version>3.6.0-SNAPSHOT</version>
+    <version>3.7.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Liquibase Parent Configuration</name>
@@ -76,9 +75,9 @@
     </distributionManagement>
 
     <properties>
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
-        <jdk.version>1.7</jdk.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <jdk.version>1.8</jdk.version>
         <maven.build.timestamp.format>E MMM dd hh:mm:ss zzz yyyy</maven.build.timestamp.format>
         <build.timestamp>${maven.build.timestamp}</build.timestamp>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -93,7 +92,7 @@
 
         <!-- Liquibase core dependencies and required jars versions -->
         <org.springframework.version>4.3.8.RELEASE</org.springframework.version>
-        <snakeyaml.version>1.18</snakeyaml.version>
+        <snakeyaml.version>1.23</snakeyaml.version>
 
         <!-- Liquibase SDK sdk/lib-sdk required libraries versions -->
         <commons-cli.version>1.4</commons-cli.version>
@@ -552,7 +551,7 @@
                     <version>1.4</version>
                     <configuration>
                         <providerSelection>2.0</providerSelection>
-                        <source/>
+                        <source />
                     </configuration>
                     <executions>
                         <execution>
@@ -765,7 +764,7 @@
                                 <configuration>
                                     <target>
                                         <!-- Safety -->
-                                        <mkdir dir="${project.build.directory}"/>
+                                        <mkdir dir="${project.build.directory}" />
                                     </target>
                                 </configuration>
                             </execution>

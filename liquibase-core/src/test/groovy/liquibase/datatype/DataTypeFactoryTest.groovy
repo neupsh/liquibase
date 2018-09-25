@@ -2,7 +2,7 @@ package liquibase.datatype
 
 import liquibase.database.core.*
 import liquibase.datatype.core.*
-import liquibase.sdk.database.MockDatabase
+import liquibase.database.core.MockDatabase
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -131,7 +131,7 @@ class DataTypeFactoryTest extends Specification {
         "[time](6)"                                    | new MSSQLDatabase()    | "time(6)"                                      | TimeType      | false
         "time(7)"                                      | new MSSQLDatabase()    | "time"                                         | TimeType      | false
         "[time](7)"                                    | new MSSQLDatabase()    | "time"                                         | TimeType      | false
-        "timestamp"                                    | new MSSQLDatabase()    | "datetime"                                     | TimestampType | false
+//        "timestamp"                                    | new MSSQLDatabase()    | "datetime"                                     | TimestampType | false
         "tinyint"                                      | new MSSQLDatabase()    | "tinyint"                                      | TinyIntType   | false
         "[tinyint]"                                    | new MSSQLDatabase()    | "tinyint"                                      | TinyIntType   | false
         "uniqueidentifier"                             | new MSSQLDatabase()    | "uniqueidentifier"                             | UUIDType      | false

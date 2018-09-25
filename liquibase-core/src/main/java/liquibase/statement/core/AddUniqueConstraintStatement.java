@@ -2,7 +2,7 @@ package liquibase.statement.core;
 
 import liquibase.change.ColumnConfig;
 import liquibase.statement.AbstractSqlStatement;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 
 public class AddUniqueConstraintStatement extends AbstractSqlStatement {
 
@@ -13,11 +13,12 @@ public class AddUniqueConstraintStatement extends AbstractSqlStatement {
     private String constraintName;
     private String tablespace;
 
+    private boolean clustered;
+    private boolean shouldValidate = true; //only Oracle PL/SQL feature
+
     private boolean deferrable;
     private boolean initiallyDeferred;
     private boolean disabled;
-    private boolean clustered;
-    private boolean shouldValidate = true; //only Oracle PL/SQL feature
 
     private String forIndexName;
     private String forIndexSchemaName;
@@ -48,7 +49,7 @@ public class AddUniqueConstraintStatement extends AbstractSqlStatement {
     }
 
     public String getColumnNames() {
-        return StringUtils.join(columns, ", ", new StringUtils.StringUtilsFormatter<ColumnConfig>() {
+        return StringUtil.join(columns, ", ", new StringUtil.StringUtilFormatter<ColumnConfig>() {
             @Override
             public String toString(ColumnConfig obj) {
                 return obj.getName() + (obj.getDescending() != null && obj.getDescending() ? " DESC" : "");
@@ -68,6 +69,7 @@ public class AddUniqueConstraintStatement extends AbstractSqlStatement {
         this.tablespace = tablespace;
         return this;
     }
+
     public boolean isDeferrable() {
         return deferrable;
     }
@@ -86,13 +88,13 @@ public class AddUniqueConstraintStatement extends AbstractSqlStatement {
         return this;
     }
 
-    public AddUniqueConstraintStatement setDisabled(boolean disabled) {
-        this.disabled= disabled;
-        return this;
-    }
-
     public boolean isDisabled() {
         return disabled;
+    }
+
+    public AddUniqueConstraintStatement setDisabled(boolean disabled) {
+        this.disabled = disabled;
+        return this;
     }
 
     public AddUniqueConstraintStatement setClustered(boolean clustered) {

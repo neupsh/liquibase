@@ -11,7 +11,7 @@ import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.exception.ValidationErrors;
 import liquibase.resource.ResourceAccessor;
 import liquibase.util.StreamUtil;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,8 +22,6 @@ import java.io.InputStream;
  * To create an instance call the constructor as normal and then call
  * {@link AbstractSQLChange#setResourceAccessor(ResourceAccessor)} before calling setPath, otherwise the
  * file will likely not be found.
- *
- * @author <a href="mailto:csuml@yahoo.co.uk">Paul Keeble</a>
  */
 @DatabaseChange(name = "sqlFile",
         description = "The 'sqlFile' tag allows you to specify any sql statements and have it stored external in a " +
@@ -132,7 +130,7 @@ public class SQLFileChange extends AbstractSQLChange {
     @Override
     public ValidationErrors validate(Database database) {
         ValidationErrors validationErrors = new ValidationErrors();
-        if (StringUtils.trimToNull(getPath()) == null) {
+        if (StringUtil.trimToNull(getPath()) == null) {
             validationErrors.addError("'path' is required");
         }
         return validationErrors;

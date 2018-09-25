@@ -9,6 +9,7 @@ import liquibase.changelog.filter.DbmsChangeSetFilter;
 import liquibase.changelog.filter.LabelChangeSetFilter;
 import liquibase.changelog.visitor.ValidatingVisitor;
 import liquibase.database.Database;
+import liquibase.database.DatabaseList;
 import liquibase.database.ObjectQuotingStrategy;
 import liquibase.exception.*;
 import liquibase.logging.LogService;
@@ -22,7 +23,7 @@ import liquibase.precondition.Conditional;
 import liquibase.precondition.core.PreconditionContainer;
 import liquibase.resource.ResourceAccessor;
 import liquibase.util.StreamUtil;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 import liquibase.util.file.FilenameUtils;
 
 import java.io.File;
@@ -177,12 +178,10 @@ public class DatabaseChangeLog implements Comparable<DatabaseChangeLog>, Conditi
 
     public ChangeSet getChangeSet(String path, String author, String id) {
         for (ChangeSet changeSet : changeSets) {
-            if (normalizePath(changeSet.getFilePath()).equalsIgnoreCase(normalizePath(path)) && changeSet.getAuthor()
-                    .equalsIgnoreCase(author) && changeSet.getId().equalsIgnoreCase(id) && ((changeSet.getDbmsSet() ==
-                    null) || (changeLogParameters == null) || (changeLogParameters.getValue("database.typeName", this) ==
-                    null) || changeSet.getDbmsSet().isEmpty() || changeSet.getDbmsSet().contains(changeLogParameters
-                    .getValue("database.typeName", this).toString()))
-                    ) {
+            if (normalizePath(changeSet.getFilePath()).equalsIgnoreCase(normalizePath(path))
+                    && changeSet.getAuthor().equalsIgnoreCase(author)
+                    && changeSet.getId().equalsIgnoreCase(id)
+                    && isDbmsMatch(changeSet.getDbmsSet())) {
                 return changeSet;
             }
         }
@@ -321,23 +320,20 @@ public class DatabaseChangeLog implements Comparable<DatabaseChangeLog>, Conditi
         expandExpressions(node);
         String nodeName = node.getName();
         switch (nodeName) {
-            case "changeSet":
-                this.addChangeSet(createChangeSet(node, resourceAccessor));
-                break;
-            case "include": {
-                String path = node.getChildValue(null, "file", String.class);
-                if (path == null) {
-                    throw new UnexpectedLiquibaseException("No 'file' attribute on 'include'");
-                }
-                path = path.replace('\\', '/');
-                ContextExpression includeContexts = new ContextExpression(node.getChildValue(null, "context", String
-                        .class));
-                try {
-                    include(path, node.getChildValue(null, "relativeToChangelogFile", false), resourceAccessor,
-                            includeContexts, true);
-                } catch (LiquibaseException e) {
-                    throw new SetupException(e);
-                }
+            case"changeSet":
+            if (isDbmsMatch(node.getChildValue(null, "dbms", String.class))) {this.addChangeSet(createChangeSet(node, resourceAccessor));}
+        break;
+            case"include": {
+            String path = node.getChildValue(null, "file", String.class);
+            if (path == null) {
+                throw new UnexpectedLiquibaseException("No 'file' attribute on 'include'");
+            }
+            path = path.replace('\\', '/');
+            ContextExpression includeContexts = new ContextExpression(node.getChildValue(null, "context", String.class));
+            try {
+                include(path, node.getChildValue(null, "relativeToChangelogFile", false), resourceAccessor, includeContexts, true);
+            } catch (LiquibaseException e) {
+                throw new SetupException(e);}
                 break;
             }
             case "includeAll": {
@@ -431,6 +427,18 @@ public class DatabaseChangeLog implements Comparable<DatabaseChangeLog>, Conditi
                 break;
             }
         }
+    }
+
+    public boolean isDbmsMatch(String dbmsList) {
+        return isDbmsMatch(DatabaseList.toDbmsSet(dbmsList));
+    }
+
+    public boolean isDbmsMatch(Set<String> dbmsSet) {
+        return dbmsSet == null
+                || changeLogParameters == null
+                || changeLogParameters.getValue("database.typeName", this) == null
+                || dbmsSet.isEmpty()
+                || dbmsSet.contains(changeLogParameters.getValue("database.typeName", this).toString());
     }
 
     public void includeAll(String pathName, boolean isRelativeToChangelogFile, IncludeAllFilter resourceFilter,
@@ -528,7 +536,7 @@ public class DatabaseChangeLog implements Comparable<DatabaseChangeLog>, Conditi
             }
         } catch (UnknownChangelogFormatException e) {
             // This matches only an extension, but filename can be a full path, too. Is it right?
-            boolean matchesFileExtension = StringUtils.trimToEmpty(fileName).matches("\\.\\w+$");
+            boolean matchesFileExtension = StringUtil.trimToEmpty(fileName).matches("\\.\\w+$");
             if (matchesFileExtension || logEveryUnknownFileFormat) {
                 LogService.getLog(getClass()).warning(
                         LogType.LOG, "included file " + relativeBaseFileName + "/" + fileName + " is not a recognized file type"

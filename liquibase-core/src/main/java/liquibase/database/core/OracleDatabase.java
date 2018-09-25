@@ -33,16 +33,9 @@ import liquibase.structure.core.Index;
 import liquibase.structure.core.PrimaryKey;
 import liquibase.structure.core.Schema;
 import liquibase.util.JdbcUtils;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 
-import java.lang.reflect.Method;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static java.util.ResourceBundle.getBundle;
 
@@ -105,9 +98,7 @@ public class OracleDatabase extends AbstractJdbcDatabase {
                  * see https://liquibase.jira.com/browse/CORE-2192
                  */
                 if (conn instanceof JdbcConnection) {
-                    Method wrappedConn = conn.getClass().getMethod("getWrappedConnection");
-                    wrappedConn.setAccessible(true);
-                    sqlConn = (Connection) wrappedConn.invoke(conn);
+                    sqlConn = ((JdbcConnection) conn).getWrappedConnection();
                 }
             } catch (Exception e) {
                 throw new UnexpectedLiquibaseException(e);
@@ -373,7 +364,7 @@ public class OracleDatabase extends AbstractJdbcDatabase {
             if (example.getName().startsWith("BIN$")) { //oracle deleted table
                 boolean filteredInOriginalQuery = this.canAccessDbaRecycleBin();
                 if (!filteredInOriginalQuery) {
-                    filteredInOriginalQuery = StringUtils.trimToEmpty(example.getSchema().getName()).equalsIgnoreCase(this.getConnection().getConnectionUserName());
+                    filteredInOriginalQuery = StringUtil.trimToEmpty(example.getSchema().getName()).equalsIgnoreCase(this.getConnection().getConnectionUserName());
                 }
 
                 if (filteredInOriginalQuery) {
@@ -506,7 +497,7 @@ public class OracleDatabase extends AbstractJdbcDatabase {
         for (int i = 0;i<clauses.size(); i++) {
             clauses.set(i, tableNameColumn+" NOT LIKE '"+clauses.get(i)+"%'");
             }
-        return "("+StringUtils.join(clauses, " AND ")+")";
+        return "("+ StringUtil.join(clauses, " AND ")+")";
     }
 
     @Override

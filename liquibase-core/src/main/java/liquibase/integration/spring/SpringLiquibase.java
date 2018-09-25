@@ -18,7 +18,7 @@ import liquibase.logging.LogType;
 import liquibase.logging.Logger;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.resource.ResourceAccessor;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 import liquibase.util.file.FilenameUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.InitializingBean;
@@ -79,6 +79,10 @@ public class SpringLiquibase implements InitializingBean, BeanNameAware, Resourc
     protected String tag;
 	protected Map<String, String> parameters;
 	protected String defaultSchema;
+	protected String liquibaseSchema;
+	protected String databaseChangeLogTable;
+	protected String databaseChangeLogLockTable;
+	protected String liquibaseTablespace;
 	protected boolean dropFirst;
 	protected boolean shouldRun = true;
 	protected File rollbackFile;
@@ -225,6 +229,38 @@ public class SpringLiquibase implements InitializingBean, BeanNameAware, Resourc
 		this.defaultSchema = defaultSchema;
 	}
 
+    public String getLiquibaseTablespace() {
+        return liquibaseTablespace;
+    }
+
+    public void setLiquibaseTablespace(String liquibaseTablespace) {
+        this.liquibaseTablespace = liquibaseTablespace;
+    }
+
+    public String getLiquibaseSchema() {
+        return liquibaseSchema;
+    }
+
+    public void setLiquibaseSchema(String liquibaseSchema) {
+        this.liquibaseSchema = liquibaseSchema;
+    }
+
+    public String getDatabaseChangeLogTable() {
+        return databaseChangeLogTable;
+    }
+
+    public void setDatabaseChangeLogTable(String databaseChangeLogTable) {
+        this.databaseChangeLogTable = databaseChangeLogTable;
+    }
+
+    public String getDatabaseChangeLogLockTable() {
+        return databaseChangeLogLockTable;
+    }
+
+	public void setDatabaseChangeLogLockTable(String databaseChangeLogLockTable) {
+		this.databaseChangeLogLockTable = databaseChangeLogLockTable;
+	}
+
 	/**
 	 * Returns whether a rollback should be tested at update time or not.
 	 */
@@ -357,12 +393,28 @@ public class SpringLiquibase implements InitializingBean, BeanNameAware, Resourc
         }
 
         Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(liquibaseConnection);
-		if (StringUtils.trimToNull(this.defaultSchema) != null) {
+		if (StringUtil.trimToNull(this.defaultSchema) != null) {
             if (database.supportsSchemas()) {
                 database.setDefaultSchemaName(this.defaultSchema);
             } else if (database.supportsCatalogs()) {
                 database.setDefaultCatalogName(this.defaultSchema);
             }
+        }
+        if (StringUtil.trimToNull(this.liquibaseSchema) != null) {
+            if (database.supportsSchemas()) {
+                database.setLiquibaseSchemaName(this.liquibaseSchema);
+            } else if (database.supportsCatalogs()) {
+                database.setLiquibaseCatalogName(this.liquibaseSchema);
+            }
+        }
+        if (StringUtil.trimToNull(this.liquibaseTablespace) != null && database.supportsTablespaces()) {
+            database.setLiquibaseTablespaceName(this.liquibaseTablespace);
+        }
+        if (StringUtil.trimToNull(this.databaseChangeLogTable) != null) {
+            database.setDatabaseChangeLogTableName(this.databaseChangeLogTable);
+        }
+        if (StringUtil.trimToNull(this.databaseChangeLogLockTable) != null) {
+            database.setDatabaseChangeLogLockTableName(this.databaseChangeLogLockTable);
         }
 		return database;
 	}

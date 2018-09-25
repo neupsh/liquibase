@@ -12,7 +12,7 @@ import liquibase.snapshot.JdbcDatabaseSnapshot;
 import liquibase.statement.core.RawSqlStatement;
 import liquibase.structure.DatabaseObject;
 import liquibase.structure.core.*;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 
 import java.sql.SQLException;
 import java.util.*;
@@ -35,7 +35,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
     protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot) throws DatabaseException, InvalidExampleException {
         Database database = snapshot.getDatabase();
         UniqueConstraint exampleConstraint = (UniqueConstraint) example;
-        Relation table = exampleConstraint.getTable();
+        Relation table = exampleConstraint.getRelation();
 
         List<Map<String, ?>> metadata = listColumns(exampleConstraint, database, snapshot);
 
@@ -43,7 +43,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
             return null;
         }
         UniqueConstraint constraint = new UniqueConstraint();
-        constraint.setTable(table);
+        constraint.setRelation(table);
         constraint.setName(example.getName());
         constraint.setBackingIndex(exampleConstraint.getBackingIndex());
         constraint.setInitiallyDeferred(((UniqueConstraint) example).isInitiallyDeferred());
@@ -54,7 +54,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
             String ascOrDesc = (String) col.get("ASC_OR_DESC");
             Boolean descending = "D".equals(ascOrDesc) ? Boolean.TRUE : ("A".equals(ascOrDesc) ? Boolean.FALSE : null);
             if (database instanceof H2Database) {
-                for (String columnName : StringUtils.splitAndTrim((String) col.get("COLUMN_NAME"), ",")) {
+                for (String columnName : StringUtil.splitAndTrim((String) col.get("COLUMN_NAME"), ",")) {
                     constraint.getColumns().add(new Column(columnName).setDescending(descending).setRelation(table));
                 }
             } else {
@@ -108,7 +108,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
 
             for (CachedRow constraint : metadata) {
                 UniqueConstraint uq = new UniqueConstraint()
-                        .setName(cleanNameFromDatabase((String) constraint.get("CONSTRAINT_NAME"), database)).setTable(table);
+                        .setName(cleanNameFromDatabase((String) constraint.get("CONSTRAINT_NAME"), database)).setRelation(table);
                 if (constraint.containsColumn("INDEX_NAME")) {
                     uq.setBackingIndex(new Index((String) constraint.get("INDEX_NAME"), (String) constraint.get("INDEX_CATALOG"), (String) constraint.get("INDEX_SCHEMA"), table.getName()));
                 }
@@ -127,7 +127,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
     }
 
     protected List<Map<String, ?>> listColumns(UniqueConstraint example, Database database, DatabaseSnapshot snapshot) throws DatabaseException {
-        Relation table = example.getTable();
+        Relation table = example.getRelation();
         Schema schema = table.getSchema();
         String name = example.getName();
 
@@ -156,7 +156,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
                         + "and const.table_name=col.table_name "
                         + "and const.constraint_name=col.constraint_name "
                         + "where const.constraint_schema='" + database.correctObjectName(schema.getCatalogName(), Catalog.class) + "' "
-                        + "and const.table_name='" + database.correctObjectName(example.getTable().getName(), Table.class) + "' "
+                        + "and const.table_name='" + database.correctObjectName(example.getRelation().getName(), Table.class) + "' "
                         + "and const.constraint_name='" + database.correctObjectName(name, UniqueConstraint.class) + "'"
                         + "order by ordinal_position";
             } else if (database instanceof PostgresDatabase) {
@@ -168,7 +168,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
                         + "and const.constraint_name=col.constraint_name "
                         + "where const.constraint_catalog='" + database.correctObjectName(schema.getCatalogName(), Catalog.class) + "' "
                         + "and const.constraint_schema='" + database.correctObjectName(schema.getSchema().getName(), Schema.class) + "' "
-                        + "and const.table_name='" + database.correctObjectName(example.getTable().getName(), Table.class) + "' "
+                        + "and const.table_name='" + database.correctObjectName(example.getRelation().getName(), Table.class) + "' "
                         + "and const.constraint_name='" + database.correctObjectName(name, UniqueConstraint.class) + "'"
                         + "order by ordinal_position";
             } else if (database instanceof MSSQLDatabase) {
@@ -194,7 +194,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
                                 "AND [c].[column_id] = [ic].[column_id] " +
                                     "WHERE [s].[name] = N'" + database.escapeStringForDatabase(database.correctObjectName(schema.getName(), Schema.class)) + "' ";
                     if (!bulkQuery) {
-                        sql += "AND [t].[name] = N'" + database.escapeStringForDatabase(database.correctObjectName(example.getTable().getName(), Table.class)) + "' " +
+                        sql += "AND [t].[name] = N'" + database.escapeStringForDatabase(database.correctObjectName(example.getRelation().getName(), Table.class)) + "' " +
                                 "AND [kc].[name] = N'" + database.escapeStringForDatabase(database.correctObjectName(name, UniqueConstraint.class)) + "' ";
                     }
                     sql += "ORDER BY " +
@@ -247,7 +247,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
                     Map rowData = rows.get(0);
                     String descriptor = rowData.get("DESCRIPTOR").toString();
                     descriptor = descriptor.replaceFirst(".*\\(", "").replaceFirst("\\).*", "");
-                    for (String columnNumber : StringUtils.splitAndTrim(descriptor, ",")) {
+                    for (String columnNumber : StringUtil.splitAndTrim(descriptor, ",")) {
                         String columnName = (String) ExecutorService.getInstance().getExecutor(database).queryForObject(new RawSqlStatement(
                                 "select c.columnname from sys.syscolumns c "
                                         + "join sys.systables t on t.tableid=c.referenceid "
@@ -273,7 +273,7 @@ public class UniqueConstraintSnapshotGenerator extends JdbcSnapshotGenerator {
                         "where sysconstraint.ref_object_id = syscolumn.object_id " +
                         "and sysconstraint.table_object_id = systable.object_id " +
                         "and sysconstraint.constraint_name = '" + database.correctObjectName(name, UniqueConstraint.class) + "' " +
-                        "and systable.table_name = '" + database.correctObjectName(example.getTable().getName(), Table.class) + "'";
+                        "and systable.table_name = '" + database.correctObjectName(example.getRelation().getName(), Table.class) + "'";
             } else if (database instanceof InformixDatabase) {
                 sql = getUniqueConstraintsSqlInformix((InformixDatabase)database, schema, name);
             } else {

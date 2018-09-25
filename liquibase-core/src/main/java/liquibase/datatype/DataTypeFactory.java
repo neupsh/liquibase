@@ -1,5 +1,6 @@
 package liquibase.datatype;
 
+import liquibase.Scope;
 import liquibase.change.ColumnConfig;
 import liquibase.database.Database;
 import liquibase.database.core.OracleDatabase;
@@ -9,10 +10,10 @@ import liquibase.datatype.core.IntType;
 import liquibase.datatype.core.UnknownType;
 import liquibase.exception.ServiceNotFoundException;
 import liquibase.exception.UnexpectedLiquibaseException;
-import liquibase.servicelocator.ServiceLocator;
+import liquibase.plugin.AbstractPluginFactory;
 import liquibase.structure.core.DataType;
 import liquibase.util.ObjectUtil;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,13 +29,10 @@ public class DataTypeFactory {
      * {@link LiquibaseDataType}
      */
     protected DataTypeFactory() {
-        Class<? extends LiquibaseDataType>[] classes;
         try {
-            classes = ServiceLocator.getInstance().findClasses(LiquibaseDataType.class);
-
-            for (Class<? extends LiquibaseDataType> clazz : classes) {
+            for (LiquibaseDataType type : Scope.getCurrentScope().getServiceLocator().findInstances(LiquibaseDataType.class)) {
                 //noinspection unchecked
-                register(clazz);
+                register(type);
             }
 
         } catch (ServiceNotFoundException e) {
@@ -65,34 +63,28 @@ public class DataTypeFactory {
      * Registers an implementation of {@link LiquibaseDataType} with both its name and all aliases for the data type
      * as a handler in the factory's registry. Classes implement the {@link LiquibaseDataType#getPriority()}, which will
      * cause the class with the highest priority to become the primary handler for the data type.
-     * @param dataTypeClass the implementation to register
+     * @param type the implementation to register
      */
-    public void register(Class<? extends LiquibaseDataType> dataTypeClass) {
+    public void register(LiquibaseDataType type) {
         try {
-            LiquibaseDataType example = dataTypeClass.newInstance();
             List<String> names = new ArrayList<>();
-            names.add(example.getName());
-            names.addAll(Arrays.asList(example.getAliases()));
+            names.add(type.getName());
+            names.addAll(Arrays.asList(type.getAliases()));
 
-            Comparator<Class<? extends LiquibaseDataType>> comparator = new Comparator<Class<? extends LiquibaseDataType>>() {
-                @Override
-                public int compare(Class<? extends LiquibaseDataType> o1, Class<? extends LiquibaseDataType> o2) {
-                    try {
-                        return -1 * Integer.valueOf(o1.newInstance().getPriority()).compareTo(o2.newInstance().getPriority());
-                    } catch (Exception e) {
-                        throw new UnexpectedLiquibaseException(e);
-                    }
+            Comparator<Class<? extends LiquibaseDataType>> comparator = (o1, o2) -> {
+                try {
+                    return -1 * Integer.compare(o1.newInstance().getPriority(), o2.newInstance().getPriority());
+                } catch (Exception e) {
+                    throw new UnexpectedLiquibaseException(e);
                 }
             };
 
             for (String name : names) {
-                name = name.toLowerCase();
-                if (registry.get(name) == null) {
-                    registry.put(name, new ArrayList<Class<? extends LiquibaseDataType>>());
-                }
+                name = name.toLowerCase(Locale.US);
+                registry.computeIfAbsent(name, k -> new ArrayList<>());
                 List<Class<? extends LiquibaseDataType>> classes = registry.get(name);
-                classes.add(dataTypeClass);
-                Collections.sort(classes, comparator);
+                classes.add(type.getClass());
+                classes.sort(comparator);
             }
         } catch (Exception e) {
             throw new UnexpectedLiquibaseException(e);
@@ -104,7 +96,7 @@ public class DataTypeFactory {
      * @param name
      */
     public void unregister(String name) {
-        registry.remove(name.toLowerCase());
+        registry.remove(name.toLowerCase(Locale.US));
     }
 
     /**
@@ -138,8 +130,8 @@ public class DataTypeFactory {
         // If the remaining string ends with " identity", then remove the " identity" and remember than we want
         // to set the autoIncrement property later.
         boolean autoIncrement = false;
-        if (dataTypeName.endsWith(" identity")) {
-            dataTypeName = dataTypeName.replaceFirst(" identity$", "");
+        if (dataTypeName.toLowerCase(Locale.US).endsWith(" identity")) {
+            dataTypeName = dataTypeName.toLowerCase(Locale.US).replaceFirst(" identity$", "");
             autoIncrement = true;
         }
 
@@ -167,8 +159,8 @@ public class DataTypeFactory {
 
         // record additional information that is still attached to the data type name
         String additionalInfo = null;
-        if (dataTypeName.toLowerCase().startsWith("bit varying")
-            || dataTypeName.toLowerCase().startsWith("character varying")) {
+        if (dataTypeName.toLowerCase(Locale.US).startsWith("bit varying")
+            || dataTypeName.toLowerCase(Locale.US).startsWith("character varying")) {
             // not going to do anything. Special case for postgres in our tests,
             // need to better support handling these types of differences
         } else {
@@ -182,12 +174,12 @@ public class DataTypeFactory {
         }
 
         // try to find matching classes for the data type name in our registry
-        Collection<Class<? extends LiquibaseDataType>> classes = registry.get(dataTypeName.toLowerCase());
+        Collection<Class<? extends LiquibaseDataType>> classes = registry.get(dataTypeName.toLowerCase(Locale.US));
 
         LiquibaseDataType liquibaseDataType = null;
         if (classes == null) {
             // Map (date/time) INTERVAL types to the UnknownType
-            if (dataTypeName.toUpperCase().startsWith("INTERVAL")) {
+            if (dataTypeName.toUpperCase(Locale.US).startsWith("INTERVAL")) {
                 liquibaseDataType = new UnknownType(dataTypeDefinition);
             } else {
                 liquibaseDataType = new UnknownType(dataTypeName);
@@ -221,7 +213,7 @@ public class DataTypeFactory {
             String[] params = paramStrings.split(",");
 
             for (String param : params) {
-                param = StringUtils.trimToNull(param);
+                param = StringUtil.trimToNull(param);
                 if (param != null) {
                     if ((liquibaseDataType instanceof CharType) && !(database instanceof OracleDatabase)) {
                         // TODO this might lead to wrong snapshot results in Oracle Database, because it assumes
@@ -243,7 +235,7 @@ public class DataTypeFactory {
                 .replaceFirst("\\}.*", "");
             String[] params = paramStrings.split(",");
             for (String param : params) {
-                param = StringUtils.trimToNull(param);
+                param = StringUtil.trimToNull(param);
                 if (param != null) {
                     String[] paramAndValue = param.split(":", 2);
                     // TODO: A run-time exception will occur here if the user writes a property name into the

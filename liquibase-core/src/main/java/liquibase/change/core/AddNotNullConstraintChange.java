@@ -12,7 +12,7 @@ import liquibase.statement.core.SetNullableStatement;
 import liquibase.statement.core.UpdateStatement;
 import liquibase.structure.core.Column;
 import liquibase.structure.core.Index;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -150,39 +150,6 @@ public class AddNotNullConstraintChange extends AbstractChange {
         return statements.toArray(new SqlStatement[statements.size()]);
     }
     
-    // TODO Please do not remove this, I intend to restore SQLite support for this operation shortly.
-    @SuppressWarnings("squid:UnusedPrivateMethod")
-    private SqlStatement[] generateStatementsForSQLiteDatabase(Database database) throws DatabaseException {
-    
-        // SQLite does not support this ALTER TABLE operation until now.
-        // For more information see: http://www.sqlite.org/omitted.html.
-        // This is a small work around...
-    
-        List<SqlStatement> statements = new ArrayList<>();
-    
-        if (defaultNullValue != null) {
-            statements.add(
-                new UpdateStatement(
-                    getCatalogName(), getSchemaName(),
-                    getTableName()
-                ).addNewColumnValue(
-                    getColumnName(), getDefaultNullValue()).setWhereClause(getColumnName() + " IS NULL")
-            );
-        }
-    
-        // define alter table logic
-        AlterTableVisitor renameAlterVisitor = new SQLiteAlterTableVisitor();
-    
-        // alter table
-        statements.addAll(
-            SQLiteDatabase.getAlterTableStatements(
-                renameAlterVisitor, database, getCatalogName(), getSchemaName(), getTableName()
-            )
-        );
-    
-        return statements.toArray(new SqlStatement[statements.size()]);
-    }
-    
     @Override
     protected Change[] createInverses() {
         DropNotNullConstraintChange inverse = new DropNotNullConstraintChange();
@@ -199,7 +166,7 @@ public class AddNotNullConstraintChange extends AbstractChange {
     @Override
     public String getConfirmationMessage() {
         return "NOT NULL constraint " +
-            (StringUtils.trimToNull(getConstraintName()) != null
+            (StringUtil.trimToNull(getConstraintName()) != null
                 ? String.format("\"%s\" ", getConstraintName()) : "" ) +
             "has been added to " + getTableName() + "." + getColumnName();
     }

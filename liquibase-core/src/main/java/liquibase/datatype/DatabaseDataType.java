@@ -1,6 +1,8 @@
 package liquibase.datatype;
 
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
+
+import java.util.Locale;
 
 /**
  * This class represents a native data type used by a specific RDBMS. This is in contrast of
@@ -30,7 +32,7 @@ public class DatabaseDataType {
                     stringParams[i] = parameters[i].toString();
                 }
             }
-            type += "("+ StringUtils.join(stringParams, ", ")+")";
+            type += "("+ StringUtil.join(stringParams, ", ")+")";
         }
     }
 
@@ -45,8 +47,8 @@ public class DatabaseDataType {
      * @return Whether the type is serial
      */
     public boolean isAutoIncrement() {
-        return "serial".equalsIgnoreCase(type) || "bigserial".equalsIgnoreCase(type) || "smallserial"
-            .equalsIgnoreCase(type);
+        return "serial".equals(type.toLowerCase(Locale.US)) || "bigserial".equals(type.toLowerCase(Locale.US)) || "smallserial"
+            .equals(type.toLowerCase(Locale.US));
     }
 
     public String toSql() {

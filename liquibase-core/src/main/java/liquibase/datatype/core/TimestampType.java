@@ -1,6 +1,8 @@
 package liquibase.datatype.core;
 
 import liquibase.change.core.LoadDataChange;
+import java.util.Locale;
+
 import liquibase.configuration.GlobalConfiguration;
 import liquibase.configuration.LiquibaseConfiguration;
 import liquibase.database.Database;
@@ -11,8 +13,10 @@ import liquibase.datatype.LiquibaseDataType;
 import liquibase.exception.DatabaseIncapableOfOperation;
 import liquibase.logging.LogService;
 import liquibase.logging.LogType;
-import liquibase.util.StringUtils;
+import liquibase.util.StringUtil;
 import liquibase.util.grammar.ParseException;
+
+import java.util.Locale;
 
 /**
  * Data type support for TIMESTAMP data types in various DBMS. All DBMS are at least expected to support the
@@ -29,7 +33,7 @@ public class TimestampType extends DateTimeType {
      */
     @Override
     public DatabaseDataType toDatabaseDataType(Database database) {
-        String originalDefinition = StringUtils.trimToEmpty(getRawDefinition());
+        String originalDefinition = StringUtil.trimToEmpty(getRawDefinition());
         // If a fractional precision is given, check is the DBMS supports the length
         if (getParameters().length > 0) {
             Integer desiredLength = null;
@@ -69,7 +73,7 @@ public class TimestampType extends DateTimeType {
             if (!LiquibaseConfiguration.getInstance()
                     .getProperty(GlobalConfiguration.class, GlobalConfiguration.CONVERT_DATA_TYPES)
                     .getValue(Boolean.class)
-                    && originalDefinition.toLowerCase().startsWith("timestamp")) {
+                    && originalDefinition.toLowerCase(Locale.US).startsWith("timestamp")) {
                 return new DatabaseDataType(database.escapeDataTypeName("timestamp"));
             }
             return new DatabaseDataType(database.escapeDataTypeName("datetime"));
@@ -117,13 +121,22 @@ public class TimestampType extends DateTimeType {
             type = new DatabaseDataType("TIMESTAMP");
         }
 
-        if (((getAdditionalInformation() != null) && ((database instanceof PostgresDatabase) || (database instanceof
-            OracleDatabase))) || (database instanceof HsqlDatabase) || (database instanceof H2Database)){
+        if (getAdditionalInformation() != null
+                && (database instanceof PostgresDatabase
+                || database instanceof OracleDatabase)
+                || database instanceof H2Database
+                || database instanceof HsqlDatabase){
             String additionalInformation = this.getAdditionalInformation();
 
-            if ((additionalInformation != null) && (database instanceof PostgresDatabase)) {
-                if (additionalInformation.toUpperCase().contains("TIMEZONE")) {
-                    additionalInformation = additionalInformation.toUpperCase().replace("TIMEZONE", "TIME ZONE");
+            if (additionalInformation != null) {
+                String additionInformation = additionalInformation.toUpperCase(Locale.US);
+                if ((database instanceof PostgresDatabase) && additionInformation.toUpperCase(Locale.US).contains("TIMEZONE")) {
+                    additionalInformation = additionInformation.toUpperCase(Locale.US).replace("TIMEZONE", "TIME ZONE");
+                }
+                // CORE-3229 Oracle 11g doesn't support WITHOUT clause in TIMESTAMP data type
+                if ((database instanceof OracleDatabase) && additionInformation.startsWith("WITHOUT")) {
+                    // https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#sthref389
+                    additionalInformation = null;
                 }
             }
 
